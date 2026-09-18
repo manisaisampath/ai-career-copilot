@@ -4,8 +4,10 @@ node_modules/
 .pnp.js
 
 # Production build
-dist/
-build/
+!dist
+!dist/**
+!api/dist
+!api/dist/**
 !frontend/dist
 !frontend/dist/**
 !backend/dist

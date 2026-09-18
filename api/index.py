@@ -14,9 +14,9 @@ from fastapi import Request
 @app.middleware("http")
 async def vercel_route_dispatcher(request: Request, call_next):
     path_param = request.query_params.get("_path")
-    if path_param:
+    if path_param is not None:
         clean_subpath = path_param.strip("/")
-        request.scope["path"] = f"/api/{clean_subpath}"
+        request.scope["path"] = f"/{clean_subpath}" if clean_subpath else "/"
         
         # Remove internal _path parameter from ASGI query string
         qs = parse_qs(request.scope.get("query_string", b"").decode("utf-8", errors="ignore"))

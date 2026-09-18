@@ -54,40 +54,79 @@ def health_check():
 import os
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi import HTTPException
 
-possible_dist_dirs = [
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dist")),
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist")),
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")),
-    os.path.abspath("backend/dist"),
-    os.path.abspath("frontend/dist"),
-    "/vercel/path0/backend/dist",
-    "/vercel/path0/frontend/dist"
-]
+def get_frontend_dist():
+    candidates = [
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dist")),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "dist")),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist")),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")),
+        os.path.abspath("backend/dist"),
+        os.path.abspath("frontend/dist"),
+        os.path.abspath("dist"),
+        "/var/task/dist",
+        "/var/task/frontend/dist",
+        "/var/task/backend/dist",
+        "/vercel/path0/dist",
+        "/vercel/path0/frontend/dist",
+        "/vercel/path0/backend/dist"
+    ]
+    for p in candidates:
+        if os.path.isdir(p) and os.path.isfile(os.path.join(p, "index.html")):
+            return p
+    return None
 
-frontend_dist = None
-for p in possible_dist_dirs:
-    if os.path.isdir(p) and os.path.isfile(os.path.join(p, "index.html")):
-        frontend_dist = p
-        break
+@app.get("/api/debug-dist")
+def debug_dist():
+    dist = get_frontend_dist()
+    files = []
+    if dist and os.path.isdir(dist):
+        for root, _, filenames in os.walk(dist):
+            for fn in filenames:
+                files.append(os.path.relpath(os.path.join(root, fn), dist))
+    return {
+        "dist": dist,
+        "cwd": os.getcwd(),
+        "files": files
+    }
 
-if frontend_dist:
-    assets_dir = os.path.join(frontend_dist, "assets")
-    if os.path.isdir(assets_dir):
-        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+@app.get("/")
+async def serve_root():
+    dist = get_frontend_dist()
+    if dist:
+        return FileResponse(os.path.join(dist, "index.html"), media_type="text/html")
+    raise HTTPException(status_code=404, detail="Frontend dist not found")
 
-    @app.get("/")
-    async def serve_root():
-        return FileResponse(os.path.join(frontend_dist, "index.html"))
-
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        if full_path.startswith("api"):
-            from fastapi import HTTPException
-            raise HTTPException(status_code=404, detail="Not Found")
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    if full_path.startswith("api"):
+        raise HTTPException(status_code=404, detail="API route not found")
         
-        file_path = os.path.join(frontend_dist, full_path)
-        if os.path.isfile(file_path):
-            return FileResponse(file_path)
-        return FileResponse(os.path.join(frontend_dist, "index.html"))
+    dist = get_frontend_dist()
+    if not dist:
+        raise HTTPException(status_code=500, detail="Frontend build not found")
+
+    clean_path = full_path.lstrip("/")
+    target = os.path.abspath(os.path.join(dist, clean_path))
+    
+    if clean_path and os.path.isfile(target):
+        media_type = None
+        if clean_path.endswith(".js") or clean_path.endswith(".mjs"):
+            media_type = "application/javascript"
+        elif clean_path.endswith(".css"):
+            media_type = "text/css"
+        elif clean_path.endswith(".svg"):
+            media_type = "image/svg+xml"
+        elif clean_path.endswith(".png"):
+            media_type = "image/png"
+        elif clean_path.endswith(".ico"):
+            media_type = "image/x-icon"
+        return FileResponse(target, media_type=media_type)
+    
+    if clean_path.startswith("assets/") or clean_path.endswith((".js", ".css", ".map")):
+        raise HTTPException(status_code=404, detail=f"Asset {clean_path} not found")
+
+    return FileResponse(os.path.join(dist, "index.html"), media_type="text/html")
+
 
