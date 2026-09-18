@@ -6,6 +6,10 @@ node_modules/
 # Production build
 dist/
 build/
+!frontend/dist
+!frontend/dist/**
+!backend/dist
+!backend/dist/**
 
 # Environment variables & secrets
 .env
@@ -74,3 +78,5 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+.vercel

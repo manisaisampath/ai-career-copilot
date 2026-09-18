@@ -33,8 +33,8 @@ app.include_router(ats.router, prefix=settings.API_V1_STR)
 app.include_router(interviews.router, prefix=settings.API_V1_STR)
 app.include_router(career.router, prefix=settings.API_V1_STR)
 
-@app.get("/")
-def root():
+@app.get("/api")
+def api_root():
     return {
         "app": settings.PROJECT_NAME,
         "tagline": "Build smarter. Match better. Interview with confidence.",
@@ -49,3 +49,45 @@ def health_check():
         "llm_provider": settings.LLM_PROVIDER,
         "database": "connected"
     }
+
+# Mount static frontend and provide SPA routing
+import os
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+possible_dist_dirs = [
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dist")),
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist")),
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")),
+    os.path.abspath("backend/dist"),
+    os.path.abspath("frontend/dist"),
+    "/vercel/path0/backend/dist",
+    "/vercel/path0/frontend/dist"
+]
+
+frontend_dist = None
+for p in possible_dist_dirs:
+    if os.path.isdir(p) and os.path.isfile(os.path.join(p, "index.html")):
+        frontend_dist = p
+        break
+
+if frontend_dist:
+    assets_dir = os.path.join(frontend_dist, "assets")
+    if os.path.isdir(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/")
+    async def serve_root():
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api"):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Not Found")
+        
+        file_path = os.path.join(frontend_dist, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
+
