@@ -12,7 +12,7 @@ export const RegisterPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const { loginAsDemo } = useAuth();
+  const { register, loginAsDemo } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -28,16 +28,9 @@ export const RegisterPage = () => {
     setLoading(true);
     setError('');
     try {
-      await authService.register({ 
-        name: name.trim(), 
-        email: email.trim().toLowerCase(), 
-        password: password 
-      });
+      await register(name.trim(), email.trim().toLowerCase(), password);
       setSuccess(true);
-      // Wait 1.5 seconds then redirect to login screen so user signs in manually
-      setTimeout(() => {
-        navigate('/login', { state: { registeredEmail: email } });
-      }, 1500);
+      navigate('/dashboard');
     } catch (err) {
       const detail = err.response?.data?.detail;
       if (detail) {
