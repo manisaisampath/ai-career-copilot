@@ -10,7 +10,7 @@ export const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const { login, register } = useAuth();
+  const { login, register, loginAsDemo } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -25,7 +25,7 @@ export const LoginPage = () => {
       await login(email, password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid email or password. Please try again.');
+      setError(err.response?.data?.detail || 'Invalid email or password. You can also click Try Demo Account below.');
     } finally {
       setLoading(false);
     }
@@ -34,19 +34,13 @@ export const LoginPage = () => {
   const handleDemoLogin = async () => {
     setLoading(true);
     setError('');
-    const demoEmail = 'alex.chen@university.edu';
-    const demoPassword = 'Password123!';
     try {
-      await login(demoEmail, demoPassword);
+      await login('alex.chen@university.edu', 'Password123!');
       navigate('/dashboard');
-    } catch (err) {
-      // If demo user doesn't exist yet, auto register demo user!
-      try {
-        await register('Alex Chen', demoEmail, demoPassword, 'Software Engineer');
-        navigate('/dashboard');
-      } catch (regErr) {
-        setError('Could not initialize demo account. Please register manually.');
-      }
+    } catch {
+      // Instant guaranteed demo session
+      loginAsDemo();
+      navigate('/dashboard');
     } finally {
       setLoading(false);
     }

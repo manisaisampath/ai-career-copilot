@@ -19,19 +19,42 @@ export const AuthProvider = ({ children }) => {
     const initAuth = async () => {
       const storedToken = localStorage.getItem('token');
       if (storedToken) {
+        if (storedToken.startsWith('demo-')) {
+          setLoading(false);
+          return;
+        }
         try {
           const res = await authService.getMe();
           setUser(res.data);
           localStorage.setItem('user', JSON.stringify(res.data));
         } catch (err) {
           console.error("Auth validation failed:", err);
-          logout();
+          const saved = localStorage.getItem('user');
+          if (!saved) {
+            logout();
+          }
         }
       }
       setLoading(false);
     };
     initAuth();
   }, []);
+
+  const loginAsDemo = () => {
+    const demoUser = {
+      id: 999,
+      name: 'Alex Chen',
+      email: 'alex.chen@university.edu',
+      target_role: 'Software Engineer',
+      is_active: true
+    };
+    const demoToken = 'demo-token-' + Date.now();
+    localStorage.setItem('token', demoToken);
+    localStorage.setItem('user', JSON.stringify(demoUser));
+    setToken(demoToken);
+    setUser(demoUser);
+    return demoUser;
+  };
 
   const login = async (email, password) => {
     const res = await authService.login({ email, password });
@@ -61,7 +84,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, loginAsDemo, logout, isAuthenticated: !!token }}>
       {children}
     </AuthContext.Provider>
   );

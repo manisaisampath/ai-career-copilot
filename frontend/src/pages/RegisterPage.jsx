@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../api/services';
+import { useAuth } from '../context/AuthContext';
 import { Briefcase, ArrowRight, Lock, Mail, User, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export const RegisterPage = () => {
@@ -11,6 +12,7 @@ export const RegisterPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  const { loginAsDemo } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -37,7 +39,12 @@ export const RegisterPage = () => {
         navigate('/login', { state: { registeredEmail: email } });
       }, 1500);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed. Please try a different email.');
+      const detail = err.response?.data?.detail;
+      if (detail) {
+        setError(detail);
+      } else {
+        setError('Backend server is connecting or offline. You can explore instantly with the 1-Click Demo Account below!');
+      }
       setLoading(false);
     }
   };
@@ -131,6 +138,24 @@ export const RegisterPage = () => {
             className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition-all shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
             {loading ? 'Creating Account...' : 'Complete Registration'}
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+
+          <div className="relative flex items-center justify-center my-2">
+            <div className="border-t border-slate-200 w-full"></div>
+            <span className="bg-white px-2 text-[10px] uppercase font-semibold text-slate-400">or explore immediately</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              loginAsDemo();
+              navigate('/dashboard');
+            }}
+            className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-all shadow-xs flex items-center justify-center gap-1.5"
+            id="btn-register-demo"
+          >
+            <span>Explore Demo Account (Instant 1-Click)</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </form>

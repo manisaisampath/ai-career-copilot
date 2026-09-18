@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     
     # Database (Defaults to SQLite for local ease, supports PostgreSQL via env)
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./career_copilot.db")
+    default_db: str = "/tmp/career_copilot.db" if os.getenv("VERCEL") else "./career_copilot.db"
+    DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{default_db}")
     
     # LLM Settings
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "gemini")  # gemini | openai | claude | local
